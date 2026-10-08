@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>breakout</title>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+   <style>
+    body{
+        text-align: center;
+    }
+       #canvas{
+        background-color: black;
+        border-top:5px solid skyblue;
+        border-left:5px solid skyblue;
+        border-right:5px solid skyblue;
+        border-bottom:5px solid skyblue;                   
+    }
+   </style>
+   <script>
+      let canvas;
+      let board_width=500;
+      let board_height=500;
+      let context;
+      let player_height=10;
+      let player_width=80;
+      let player_velocityx=10;
+      let player={
+        x:board_width/2-player_width/2,
+        y:board_height-player_height-5,
+        width:player_width,
+        height:player_height,
+        velocityX:player_velocityx
+      }
+      window.onload=function(){
+      canvas=document.getElementById("canvas");
+      canvas.height=board_height;
+      canvas.width=board_width;
+      context=canvas.getContext("2d");
+      context.fillStyle="lightyellow";
+      context.fillRect(player.x,player.y,player.width,player.height);
+      requestAnimationFrame(update);
+      document.addEventListener("keydown",movePlayer);
+      }
+      function update(){
+        requestAnimationFrame(update);
+        context.clearRect(0,0,canvas.width,canvas.height);
+        context.fillStyle="lightyellow";
+        context.fillRect(player.x,player.y,player.width,player.height);
+      }
+      function movePlayer(e){
+        if(e.code=="ArrowLeft"){
+            player.x-=player.velocityX;
+        }
+        else if(e.code=="ArrowRight"){
+            player.x+=player.velocityX;
+        }
+      }
+   </script>
+</body>
+</html>
