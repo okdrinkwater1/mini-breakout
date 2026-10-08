@@ -32,7 +32,19 @@
         y:board_height-player_height-5,
         width:player_width,
         height:player_height,
-        velocityX:player_velocityx
+        VelocityX:player_velocityx
+      }
+      let ball_width=10;
+      let ball_height=10;
+      let ball_velocityx=3;
+      let ball_velocityy=2;
+      let ball={
+        x:board_width/2,
+        y:board_height/2,
+        width:ball_width,
+        height:ball_height,
+        VelocityX:ball_velocityx,
+        VelocityY:ball_velocityy
       }
       window.onload=function(){
       canvas=document.getElementById("canvas");
@@ -49,13 +61,35 @@
         context.clearRect(0,0,canvas.width,canvas.height);
         context.fillStyle="lightyellow";
         context.fillRect(player.x,player.y,player.width,player.height);
+        context.fillStyle="white";
+        ball.x+=ball.VelocityX;
+        ball.y+=ball.VelocityY;
+        context.fillRect(ball.x,ball.y,ball.width,ball.height);
+        if(ball.y<=0){
+            ball.VelocityY*=-1;
+        }
+        if(ball.x<=0||(ball.x+ball.width)>=board_width){
+            ball.VelocityX*=-1;
+        }
+        // else if(ball.y+ball.height>=boardHeight){
+        //     gameOver();
+        // }
+      }
+      function outOfBounds(xPosition){
+        return(xPosition<0||xPosition+player_width>board_width)
       }
       function movePlayer(e){
         if(e.code=="ArrowLeft"){
-            player.x-=player.velocityX;
+            let nextPlayerX=player.x-player.VelocityX;
+            if(!outOfBounds(nextPlayerX)){
+                player.x=nextPlayerX;
+            }
         }
         else if(e.code=="ArrowRight"){
-            player.x+=player.velocityX;
+            let nextPlayerX=player.x+player.VelocityX;
+            if(!outOfBounds(nextPlayerX)){
+                player.x=nextPlayerX;
+            }
         }
       }
    </script>
