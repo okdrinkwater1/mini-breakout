@@ -24,6 +24,56 @@
     }
    </style>
    <script>
+    let audio_ctx=null;
+    document.addEventListener("keydown",()=>{
+        if(!audio_ctx){
+            audio_ctx=new AudioContext();
+        }
+        audio_ctx.resume();
+    })
+    const hz=(n)=>440*Math.pow(2,(n-69)/12);
+    const A3=57,A4=69,C5=72,E5=76,A5=81;
+    const music=(midi,delay,duration,type,volume,cutoff)=>{
+        if(!audio_ctx)return;
+    const time=audio_ctx.currentTime+delay;
+    const oscillator=audio_ctx.createOscillator();
+    const gain=audio_ctx.createGain();
+    const frequency=audio_ctx.createBiquadFilter();
+    oscillator.type=type;
+    oscillator.frequency.setValueAtTime(hz(midi),time);
+    frequency.type="lowpass";
+    frequency.frequency.value=cutoff;
+    gain.gain.setValueAtTime(volume,time);
+    gain.gain.exponentialRampToValueAtTime(0.001,time+duration);
+    oscillator.connect(frequency);
+    frequency.connect(gain);
+    gain.connect(audio_ctx.destination);
+    oscillator.start(time);
+    oscillator.stop(time+duration);
+   }
+     const start_sound=()=>{
+        music(A4,0,0.1,"triangle",0.2,6000);
+        music(C5,0.1,0.1,"triangle",0.2,6000);
+        music(E5,0.2,0.25,"triangle",0.2,6000);
+     }
+     const break_sound=()=>{
+        music(E5,0,0.06,"square",0.06,3000);
+     }
+     const paddle_sound=()=>{
+        music(A4,0,0.08,"triangle",0.12,6000);
+     }
+     const levelup_sound=()=>{
+        music(A4,0,0.1,"triangle",0.2,6000);
+        music(C5,0.1,0.1,"triangle",0.2,6000);
+        music(E5,0.2,0.1,"triangle",0.2,6000);
+        music(A5,0.3,0.35,"triangle",0.2,6000);
+     }
+     const gameover_sound=()=>{
+        music(E5,0,0.2,"square",0.15,800);
+        music(C5,0.2,0.2,"square",0.15,800);
+        music(A4,0.4,0.2,"square",0.15,800);
+        music(A3,0.6,0.5,"square",0.15,400);
+     }
       let canvas;
       let boardWidth=500;
       let boardHeight=500;
@@ -68,6 +118,7 @@
       let speedMultiplier=1;
       let speedIncrease=1.1;
       let maxSpeedMultiplier=2;
+      let start=false;
       window.onload=function(){
       canvas=document.getElementById("canvas");
       canvas.height=boardHeight;
@@ -101,8 +152,10 @@
         context.fillStyle="white";
         ball.prevX=ball.x;
         ball.prevY=ball.y;
+        if(start){
         ball.x+=ball.VelocityX*dt;
         ball.y+=ball.VelocityY*dt;
+        }
         context.fillRect(ball.x,ball.y,ball.width,ball.height);
         context.fillStyle="skyblue";
         for(let i=0;i<blockArray.length;i++){
@@ -113,12 +166,14 @@
                     ball.VelocityY*=-1;
                     blockCount-=1;
                     score+=100;
+                    break_sound();
                 }
                 else if(leftCollision(ball,block)||rightCollision(ball,block)){
                     block.break=true;
                     ball.VelocityX*=-1;
                     blockCount-=1;
                     score+=100;
+                    break_sound();
                 }
                 else{
                 context.fillRect(block.x,block.y,block.width,block.height);
@@ -131,6 +186,7 @@
             speedMultiplier=Math.min(speedMultiplier*speedIncrease,maxSpeedMultiplier);
             createBlocks();
             resetBall();
+            levelup_sound();
         }
         if(ball.y<=0){
             ball.y=0;
@@ -148,17 +204,22 @@
         if(ball.VelocityY>0&&detectCollision(ball,player)&&prevBottom<=player.y){
             ball.VelocityY*=-1;
             ball.y=player.y-ball.height;
+            paddle_sound();
         }
         else if(ball.y+ball.height>=boardHeight){
             bestScore=Math.max(bestScore,score);
             context.font="20px sans-serif";
             context.fillText("Game over: Press 'Space' to Restart",80,400)
             gameOver=true;
+            gameover_sound();
             return;
         }
         context.font="20px sans-serif";
         context.fillText("score="+score,10,25);
         context.fillText("best score="+bestScore,355,25);
+        if(!start){
+            context.fillText("Press 'Space' to Start the Game",115,400);
+        }
     }
       function outOfBounds(xPosition){
         return(xPosition<0||xPosition+playerWidth>boardWidth)
@@ -170,6 +231,10 @@
                 resetGame();
             }
             return;
+        }
+        if(e.code=="Space"&&!start){
+            start=true;
+            start_sound();
         }
         if(e.code=="ArrowLeft")leftPressed=true;
         if(e.code=="ArrowRight")rightPressed=true;
@@ -226,6 +291,7 @@
         speedMultiplier=1;
         createBlocks();
         resetBall();
+        start_sound();
     }
     function resetBall(){
         ball={
