@@ -9,14 +9,18 @@
     <canvas id="canvas"></canvas>
    <style>
     body{
-        text-align: center;
+        margin:0;
+        padding-top:40px;
+        min-height:100vh;
+        box-sizing:border-box;
+        text-align:center;
+        background:lightslategray;
     }
-       #canvas{
-        background-color: black;
-        border-top:5px solid skyblue;
-        border-left:5px solid skyblue;
-        border-right:5px solid skyblue;
-        border-bottom:5px solid skyblue;                   
+    #canvas{
+        display:block;
+        margin:0 auto;
+        background-color:black;
+        border:5px solid skyblue;
     }
    </style>
    <script>
@@ -26,7 +30,7 @@
       let context;
       let playerHeight=10;
       let playerWidth=80;
-      let playerVelocityX=10;
+      let playerVelocityX=300;
       let player={
         x:boardWidth/2-playerWidth/2,
         y:boardHeight-playerHeight-5,
@@ -36,8 +40,8 @@
       }
       let ballWidth=10;
       let ballHeight=10;
-      let ballVelocityX=3;
-      let ballVelocityY=2;
+      let ballVelocityX=180;
+      let ballVelocityY=120;
       let ball={
         x:boardWidth/2,
         y:boardHeight/2,
@@ -60,6 +64,10 @@
       let bestScore=0;
       let leftPressed=false;
       let rightPressed=false;
+      let lastTime=0;
+      let speedMultiplier=1;
+      let speedIncrease=1.1;
+      let maxSpeedMultiplier=2;
       window.onload=function(){
       canvas=document.getElementById("canvas");
       canvas.height=boardHeight;
@@ -70,17 +78,19 @@
       document.addEventListener("keyup",keyUp);
       createBlocks();
       }
-      function update(){
+      function update(timestamp){
         requestAnimationFrame(update);
+        let dt=Math.min((timestamp-lastTime)/1000,0.05);
+        lastTime=timestamp;
         if(gameOver)return;
         if(leftPressed){
-            let nextPlayerX=player.x-player.VelocityX;
+            let nextPlayerX=player.x-player.VelocityX*dt;
             if(!outOfBounds(nextPlayerX)){
                 player.x=nextPlayerX;
             }
         }
         if(rightPressed){
-            let nextPlayerX=player.x+player.VelocityX;
+            let nextPlayerX=player.x+player.VelocityX*dt;
             if(!outOfBounds(nextPlayerX)){
                 player.x=nextPlayerX;
             }
@@ -89,8 +99,10 @@
         context.fillStyle="yellow";
         context.fillRect(player.x,player.y,player.width,player.height);
         context.fillStyle="white";
-        ball.x+=ball.VelocityX;
-        ball.y+=ball.VelocityY;
+        ball.prevX=ball.x;
+        ball.prevY=ball.y;
+        ball.x+=ball.VelocityX*dt;
+        ball.y+=ball.VelocityY*dt;
         context.fillRect(ball.x,ball.y,ball.width,ball.height);
         context.fillStyle="skyblue";
         for(let i=0;i<blockArray.length;i++){
@@ -116,15 +128,23 @@
         if(blockCount==0){
             score+=100*blockRows*blockColumns;
             blockRows=Math.min(blockRows+1,blockMaxRows);
+            speedMultiplier=Math.min(speedMultiplier*speedIncrease,maxSpeedMultiplier);
             createBlocks();
+            resetBall();
         }
         if(ball.y<=0){
-            ball.VelocityY*=-1;
+            ball.y=0;
+            ball.VelocityY=Math.abs(ball.VelocityY);
         }
-        if(ball.x<=0||(ball.x+ball.width)>=boardWidth){
-            ball.VelocityX*=-1;
+        if(ball.x<=0){
+            ball.x=0;
+            ball.VelocityX=Math.abs(ball.VelocityX);
         }
-        let prevBottom=ball.y+ball.height-ball.VelocityY;
+        if(ball.x+ball.width>=boardWidth){
+            ball.x=boardWidth-ball.width;
+            ball.VelocityX=-Math.abs(ball.VelocityX);
+        }
+        let prevBottom=ball.y+ball.height-ball.VelocityY*dt;
         if(ball.VelocityY>0&&detectCollision(ball,player)&&prevBottom<=player.y){
             ball.VelocityY*=-1;
             ball.y=player.y-ball.height;
@@ -138,13 +158,13 @@
         }
         context.font="20px sans-serif";
         context.fillText("score="+score,10,25);
-        context.font="20px sans-serif";
-        context.fillText("best score="+bestScore,350,25);
+        context.fillText("best score="+bestScore,355,25);
     }
       function outOfBounds(xPosition){
         return(xPosition<0||xPosition+playerWidth>boardWidth)
       }
       function movePlayer(e){
+        if(e.code=="Space"||e.code=="ArrowLeft"||e.code=="ArrowRight")e.preventDefault();
         if(gameOver){
             if(e.code=="Space"){
                 resetGame();
@@ -165,16 +185,16 @@
              a.y+a.height>b.y;
       }
       function topCollision(ball,block){
-        return detectCollision(ball,block)&&(ball.y+ball.height)>=block.y;
+        return detectCollision(ball,block)&&(ball.prevY+ball.height)<=block.y;
       }
       function bottomCollision(ball,block){
-        return detectCollision(ball,block)&&(block.y+block.height)>=ball.y;
+        return detectCollision(ball,block)&&ball.prevY>=block.y+block.height;
       }
       function leftCollision(ball,block){
-        return detectCollision(ball,block)&&(ball.x+ball.width>=block.x);
+        return detectCollision(ball,block)&&(ball.prevX+ball.width<=block.x);
       }
       function rightCollision(ball,block){
-        return detectCollision(ball,block)&&(block.x+block.width>=ball.x);
+        return detectCollision(ball,block)&&ball.prevX>=block.x+block.width;
       }
       function createBlocks(){
         blockArray=[];
@@ -201,18 +221,21 @@
             height:playerHeight,
             VelocityX:playerVelocityX
         }
+        score=0;
+        blockRows=3;
+        speedMultiplier=1;
+        createBlocks();
+        resetBall();
+    }
+    function resetBall(){
         ball={
             x:boardWidth/2,
             y:boardHeight/2,
             width:ballWidth,
             height:ballHeight,
-            VelocityX:ballVelocityX,
-            VelocityY:ballVelocityY
+            VelocityX:ballVelocityX*speedMultiplier,
+            VelocityY:ballVelocityY*speedMultiplier
         }
-        blockArray=[];
-        score=0;
-        blockRows=3;
-        createBlocks();
     }
    </script>
 </body>
